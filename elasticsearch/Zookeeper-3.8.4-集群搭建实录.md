@@ -6,7 +6,7 @@ ZooKeeper 是分布式协调服务，为 Kafka、HBase、Dubbo 等系统提供�
 
 三节点是最小的高可用集群：容忍一台故障，多数票（2/3）依然成立。本文记录一套完整的搭建过程——从目录准备到集群成形，再到读写验证、故障演练与调优。
 
-文中命令在两台以上 Rocky Linux 9 + ZooKeeper 3.8.4 + JDK 17 上验证。示例使用 `192.168.5.104 / .105 / .106`，替换为自己的地址即可。
+文中命令在三台 Rocky Linux 9 + ZooKeeper 3.8.4 + JDK 17 上验证。示例使用 `192.168.5.101 / .102 / .103`（对应 `zk1 / zk2 / zk3`、myid `1 / 2 / 3`），替换为自己的地址即可。
 
 ---
 
@@ -79,8 +79,8 @@ ZooKeeper 是一棵树，每个节点称为 znode：
 三台节点统一执行：
 
 ```bash
-mkdir -p /data/softwares /data/data/zookeeper/txn
-ls -d /data/softwares /data/data/zookeeper
+mkdir -p /opt/softwares /data/data/zookeeper/txn
+ls -d /opt/softwares /data/data/zookeeper
 ```
 
 `ls` 必须输出两条路径。若目录未创建就写 myid，会报 `没有那个文件或目录`——这是最常见的第一步失误。
@@ -89,7 +89,7 @@ ls -d /data/softwares /data/data/zookeeper
 
 | 路径 | 用途 |
 | --- | --- |
-| `/data/softwares` | 安装包与解压后的二进制 |
+| `/opt/softwares` | 安装包与解压后的二进制 |
 | `/data/data/zookeeper` | `dataDir`：快照文件 + myid |
 | `/data/data/zookeeper/txn` | `dataLogDir`：事务日志 |
 
@@ -98,7 +98,7 @@ ls -d /data/softwares /data/data/zookeeper
 ### 2.2 下载
 
 ```bash
-cd /data/softwares
+cd /opt/softwares
 curl -L -O https://archive.apache.org/dist/zookeeper/zookeeper-3.8.4/apache-zookeeper-3.8.4-bin.tar.gz
 tar xf apache-zookeeper-3.8.4-bin.tar.gz
 ```
@@ -121,13 +121,13 @@ java -version
 dnf 源不可用时可离线安装：
 
 ```bash
-cd /data/softwares
+cd /opt/softwares
 curl -L -O https://mirrors.tuna.tsinghua.edu.cn/Adoptium/17/jdk/x64/linux/OpenJDK17U-jdk_x64_linux_hotspot_17.0.13_11.tar.gz
 tar xf OpenJDK17U-jdk_x64_linux_hotspot_17.0.13_11.tar.gz
-ls -d /data/softwares/jdk-17*
+ls -d /opt/softwares/jdk-17*
 
-ln -sfn /data/softwares/jdk-17.0.13+11/bin/java /usr/local/bin/java
-ln -sfn /data/softwares/jdk-17.0.13+11/bin/javac /usr/local/bin/javac
+ln -sfn /opt/softwares/jdk-17.0.13+11/bin/java /usr/local/bin/java
+ln -sfn /opt/softwares/jdk-17.0.13+11/bin/javac /usr/local/bin/javac
 ```
 
 软链中的版本号按 `ls` 的实际输出调整。
@@ -136,7 +136,7 @@ ln -sfn /data/softwares/jdk-17.0.13+11/bin/javac /usr/local/bin/javac
 
 ```bash
 printf 'export JAVA_HOME=%s\n' "$(dirname $(dirname $(readlink -f $(which java))))" > /etc/profile.d/zk.sh
-printf 'export ZK_HOME=/data/softwares/apache-zookeeper-3.8.4-bin\n' >> /etc/profile.d/zk.sh
+printf 'export ZK_HOME=/opt/softwares/apache-zookeeper-3.8.4-bin\n' >> /etc/profile.d/zk.sh
 printf 'export PATH=$PATH:${ZK_HOME}/bin\n' >> /etc/profile.d/zk.sh
 
 source /etc/profile.d/zk.sh
@@ -167,9 +167,9 @@ dataDir=/data/data/zookeeper
 dataLogDir=/data/data/zookeeper/txn
 clientPort=2181
 
-server.1=192.168.5.104:2888:3888
-server.2=192.168.5.105:2888:3888
-server.3=192.168.5.106:2888:3888
+server.1=192.168.5.101:2888:3888
+server.2=192.168.5.102:2888:3888
+server.3=192.168.5.103:2888:3888
 
 admin.enableServer=false
 maxClientCnxns=200
@@ -187,9 +187,9 @@ dataDir=/data/data/zookeeper
 dataLogDir=/data/data/zookeeper/txn
 clientPort=2181
 
-server.1=192.168.5.104:2888:3888
-server.2=192.168.5.105:2888:3888
-server.3=192.168.5.106:2888:3888
+server.1=192.168.5.101:2888:3888
+server.2=192.168.5.102:2888:3888
+server.3=192.168.5.103:2888:3888
 
 admin.enableServer=false
 maxClientCnxns=200
@@ -249,10 +249,10 @@ RequiresMountsFor=/data
 Type=forking
 User=root
 Environment=JAVA_HOME=/usr/lib/jvm/java-17-openjdk-17.0.x.x-x.el9.x86_64
-Environment=ZOO_LOG_DIR=/data/softwares/apache-zookeeper-3.8.4-bin/logs
-ExecStart=/data/softwares/apache-zookeeper-3.8.4-bin/bin/zkServer.sh start
-ExecStop=/data/softwares/apache-zookeeper-3.8.4-bin/bin/zkServer.sh stop
-ExecReload=/data/softwares/apache-zookeeper-3.8.4-bin/bin/zkServer.sh restart
+Environment=ZOO_LOG_DIR=/opt/softwares/apache-zookeeper-3.8.4-bin/logs
+ExecStart=/opt/softwares/apache-zookeeper-3.8.4-bin/bin/zkServer.sh start
+ExecStop=/opt/softwares/apache-zookeeper-3.8.4-bin/bin/zkServer.sh stop
+ExecReload=/opt/softwares/apache-zookeeper-3.8.4-bin/bin/zkServer.sh restart
 PIDFile=/data/data/zookeeper/zookeeper_server.pid
 Restart=on-failure
 RestartSec=5
@@ -289,7 +289,7 @@ zkServer.sh status
 
 ```
 ZooKeeper JMX enabled by default
-Using config: /data/softwares/apache-zookeeper-3.8.4-bin/conf/zoo.cfg
+Using config: /opt/softwares/apache-zookeeper-3.8.4-bin/conf/zoo.cfg
 Client port found: 2181. Client address: localhost. Client SSL: false.
 Error contacting service. It is probably not running.
 ```
@@ -343,7 +343,7 @@ ss -lntp | grep -E '2181|2888|3888'
 ### 5.2 基本读写
 
 ```bash
-zkCli.sh -server 192.168.5.104:2181
+zkCli.sh -server 192.168.5.101:2181
 ```
 
 ```
@@ -388,7 +388,7 @@ deleteall /demo/node1            # 递归删除
 换一台机器连接：
 
 ```bash
-zkCli.sh -server 192.168.5.105:2181
+zkCli.sh -server 192.168.5.102:2181
 get /demo
 ```
 
@@ -399,7 +399,7 @@ get /demo
 在 `.104` 的客户端执行 `quit` 断开，等待 40~60 秒（取决于 session timeout），从另一台连接：
 
 ```bash
-zkCli.sh -server 192.168.5.106:2181
+zkCli.sh -server 192.168.5.103:2181
 ls /demo
 # node2 已消失
 ```
@@ -435,10 +435,10 @@ WatchedEvent state:SyncConnected type:NodeDataChanged path:/demo
 ```bash
 dnf install -y nmap-ncat
 
-echo ruok | nc 192.168.5.104 2181     # imok
-echo srvr | nc 192.168.5.104 2181     # 服务器状态
-echo conf | nc 192.168.5.104 2181     # 当前配置
-echo mntr | nc 192.168.5.104 2181     # 监控指标
+echo ruok | nc 192.168.5.101 2181     # imok
+echo srvr | nc 192.168.5.101 2181     # 服务器状态
+echo conf | nc 192.168.5.101 2181     # 当前配置
+echo mntr | nc 192.168.5.101 2181     # 监控指标
 ```
 
 **跨机执行无输出（空白而非报错）** 是 3.5+ 的安全默认值：四字命令仅允许本机访问。需要远程监控时显式放开：
@@ -466,20 +466,20 @@ systemctl restart zk
 停一台：
 
 ```bash
-ssh root@192.168.5.105 'systemctl stop zk'
+ssh root@192.168.5.102 'systemctl stop zk'
 ```
 
 在 `.104` 确认：
 
 ```bash
 zkServer.sh status
-zkCli.sh -server 192.168.5.104:2181    # 仍可读写
+zkCli.sh -server 192.168.5.101:2181    # 仍可读写
 ```
 
 恢复：
 
 ```bash
-ssh root@192.168.5.105 'systemctl start zk'
+ssh root@192.168.5.102 'systemctl start zk'
 ```
 
 **停两台（剩 1/3）时集群拒绝写入**——写操作需要多数票，1 票不足 2/3。此时客户端报 `ConnectionLoss` 或 `SessionExpired`，恢复一台后自动重新选主。
@@ -512,7 +512,7 @@ ps -ef | grep zookeeper | grep -i xmx     # -Xmx512m
 
 ```bash
 cat > /etc/logrotate.d/zookeeper <<'EOF'
-/data/softwares/apache-zookeeper-3.8.4-bin/logs/zookeeper.out {
+/opt/softwares/apache-zookeeper-3.8.4-bin/logs/zookeeper.out {
     daily
     rotate 7
     compress
@@ -544,7 +544,7 @@ sed -i 's/^admin.enableServer=false/admin.enableServer=true\nadmin.serverPort=80
 systemctl restart zk
 ```
 
-访问 `http://192.168.5.104:8099/commands`。
+访问 `http://192.168.5.101:8099/commands`。
 
 > 端口改成 8099 是为了避开 8080。若保持默认 8080，需先确认端口未被占用。
 
@@ -579,7 +579,7 @@ systemctl stop zk
 systemctl disable zk
 rm -f /etc/systemd/system/zk.service
 systemctl daemon-reload
-rm -rf /data/softwares/apache-zookeeper-3.8.4-bin /data/data/zookeeper
+rm -rf /opt/softwares/apache-zookeeper-3.8.4-bin /data/data/zookeeper
 rm -f /etc/profile.d/zk.sh
 ```
 

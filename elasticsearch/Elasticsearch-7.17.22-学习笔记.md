@@ -193,9 +193,9 @@ sysctl --system
 
 | 主机 | IP | `node.name` | `network.publish_host` |
 | --- | --- | --- | --- |
-| node1 | 192.168.5.104 | `elk1` | `192.168.5.104` |
-| node2 | 192.168.5.105 | `elk2` | `192.168.5.105` |
-| node3 | 192.168.5.106 | `elk3` | `192.168.5.106` |
+| node1 | 192.168.5.101 | `elk1` | `192.168.5.101` |
+| node2 | 192.168.5.102 | `elk2` | `192.168.5.102` |
+| node3 | 192.168.5.103 | `elk3` | `192.168.5.103` |
 
 ```bash
 cp /etc/elasticsearch/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml.bak
@@ -207,11 +207,11 @@ path.data: /var/lib/elasticsearch
 path.logs: /var/log/elasticsearch
 
 network.host: 0.0.0.0
-network.publish_host: 192.168.5.104
+network.publish_host: 192.168.5.101
 http.port: 9200
 transport.port: 9300
 
-discovery.seed_hosts: ["192.168.5.104:9300", "192.168.5.105:9300", "192.168.5.106:9300"]
+discovery.seed_hosts: ["192.168.5.101:9300", "192.168.5.102:9300", "192.168.5.103:9300"]
 cluster.initial_master_nodes: ["elk1", "elk2", "elk3"]
 EOF
 ```
@@ -222,7 +222,7 @@ EOF
 
 ```bash
 ip -4 -o addr show | awk '{print $2, $4}'
-# ens34      192.168.5.104/24
+# ens34      192.168.5.101/24
 # flannel.1  10.244.1.0/32      ← 子网网络地址，flannel 按此方式分配
 ```
 
@@ -289,7 +289,7 @@ LISTEN 0  4096  *:9300  *:*
 ### 4.2 身份
 
 ```bash
-curl http://192.168.5.104:9200/
+curl http://192.168.5.101:9200/
 ```
 
 ```json
@@ -304,7 +304,7 @@ curl http://192.168.5.104:9200/
 ### 4.3 成员
 
 ```bash
-curl -s 192.168.5.104:9200/_cat/nodes?v
+curl -s 192.168.5.101:9200/_cat/nodes?v
 ```
 
 在线节点数量决定返回行数，`master` 列带 `*` 的为当前主节点。**`ip` 列必须是业务地址**，若出现 `10.244.x.0` 则说明遗漏了 `network.publish_host`。
@@ -312,17 +312,17 @@ curl -s 192.168.5.104:9200/_cat/nodes?v
 ### 4.4 分片健康
 
 ```bash
-curl -s "192.168.5.104:9200/_cluster/health?pretty"
+curl -s "192.168.5.101:9200/_cluster/health?pretty"
 ```
 
 创建一个带副本的索引观察颜色变化：
 
 ```bash
-curl -XPUT "192.168.5.104:9200/t1" -H 'Content-Type: application/json' -d'
+curl -XPUT "192.168.5.101:9200/t1" -H 'Content-Type: application/json' -d'
 { "settings": { "number_of_shards": 1, "number_of_replicas": 1 } }'
 
-curl -s "192.168.5.104:9200/_cluster/health?pretty"
-curl -s "192.168.5.104:9200/_cat/shards/t1?v"
+curl -s "192.168.5.101:9200/_cluster/health?pretty"
+curl -s "192.168.5.101:9200/_cat/shards/t1?v"
 ```
 
 | 在线节点数 | 集群颜色 | 原因 |
@@ -351,7 +351,7 @@ curl -s "192.168.5.104:9200/_cat/shards/t1?v"
 sed -i '/cluster.initial_master_nodes/d' /etc/elasticsearch/elasticsearch.yml
 systemctl restart elasticsearch
 sleep 30
-curl -s 192.168.5.104:9200/_cat/nodes?v
+curl -s 192.168.5.101:9200/_cat/nodes?v
 ```
 
 **同时建议关闭 GeoIP 下载器**。集群启动后日志会反复出现：
@@ -375,7 +375,7 @@ systemctl restart elasticsearch
 以下示例通过 `curl` 调用，设置环境变量简化命令：
 
 ```bash
-export ES=http://192.168.5.104:9200
+export ES=http://192.168.5.101:9200
 ```
 
 若使用 Kibana DevTools，可直接粘贴去掉 `curl` 部分的请求。
