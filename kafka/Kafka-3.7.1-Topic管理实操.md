@@ -16,7 +16,7 @@
 | broker | 3 台，`broker.id` = 1 / 2 / 3 |
 | broker 端口 | 9092 |
 | ZK chroot | `/kafka-3.7.1` |
-| 软件路径 | `/data/softwares/kafka_2.13-3.7.1` |
+| 软件路径 | `/opt/softwares/kafka_2.13-3.7.1` |
 
 先确认 Kafka 环境变量已生效：
 
@@ -28,7 +28,7 @@ kafka-topics.sh --version
 第一条要输出路径，第二条输出 `3.7.1`。都没有就补环境变量：
 
 ```bash
-printf 'export KAFKA_HOME=/data/softwares/kafka_2.13-3.7.1\n' > /etc/profile.d/kafka.sh
+printf 'export KAFKA_HOME=/opt/softwares/kafka_2.13-3.7.1\n' > /etc/profile.d/kafka.sh
 printf 'export PATH=$PATH:${KAFKA_HOME}/bin\n' >> /etc/profile.d/kafka.sh
 source /etc/profile.d/kafka.sh
 ```
