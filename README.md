@@ -1,3 +1,14 @@
+# Linux 运维实验记录
+
+> 个人实验记录：Elasticsearch 7.17 与 ZooKeeper 3.8.4 的三节点集群搭建，按实际执行顺序写，包括中途卡住的地方。
+
+| 文档 | 内容 |
+| :--- | :--- |
+| [Elasticsearch 7.17](./Elasticsearch-7.17.22-学习笔记.md) | 三节点集群部署、索引与文档 API、批量操作、查询 DSL、排错 |
+| [ZooKeeper 3.8.4](./Zookeeper-3.8.4-集群搭建实录.md) | 三节点 quorum 集群搭建、znode 增删改查、watch、四字命令、调优 |
+
+---
+
 # Elasticsearch 7.17 三节点集群实践
 
 > 从零搭建 ES 7.17 三节点集群的完整记录：部署原理、配置要点、索引与文档 API、批量操作、查询 DSL 与排错手册。
